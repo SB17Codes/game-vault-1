@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
+import useSWR from "swr";
 import { QUERIES } from "@/server/actions";
 import GameCard from "./GameCard";
-import { Search, Loader2 } from "lucide-react";
-import debounce from "debounce";
+import { Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface GameListProps {
   initialGames: any[];
@@ -22,12 +21,22 @@ interface GameListProps {
   platforms?: any[];
 }
 
+function useDebounce(value: string, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function GameList({
   initialGames,
   genres,
   platforms,
 }: GameListProps) {
-  const [featuredGames, setFeaturedGames] = useState<Game[]>(initialGames);
   const [searchQuery, setSearchQuery] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [genreFilter, setGenreFilter] = useState("");
@@ -37,71 +46,62 @@ export default function GameList({
     return storedPage ? Number.parseInt(storedPage) : 1;
   });
   const [pageSize] = useState(20);
-  const [count, setCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false); // Add loading state
 
-  const debouncedFetchGames = useCallback(
-    debounce(
-      async (
-        search: string,
-        dates: string,
-        genres: string,
-        platforms: string,
-        page: number,
-        pageSize: number
-      ) => {
-        setIsLoading(true); // Set loading state to true before fetching
-        try {
-          const data = await QUERIES.GET_GAMES(
-            page,
-            pageSize,
-            search,
-            platforms,
-            genres,
-            dates
-          );
-          setFeaturedGames(data.results);
-          setCount(data.count);
-        } finally {
-          setIsLoading(false); // Set loading state to false after fetching (success or error)
-        }
-      },
-      500
-    ),
-    []
+  // Debounce the filter values to reduce rapid re-fetches
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const debouncedYearFilter = useDebounce(yearFilter, 500);
+  const debouncedGenreFilter = useDebounce(genreFilter, 500);
+  const debouncedPlatformFilter = useDebounce(platformFilter, 500);
+
+  // Construct dates parameter based on the debounced year filter
+  const dates = debouncedYearFilter
+    ? `${debouncedYearFilter}-01-01,${debouncedYearFilter}-12-31`
+    : "";
+
+  // Create a unique key based on all filter criteria
+  const swrKey = useMemo(
+    () => [
+      "games",
+      page,
+      pageSize,
+      debouncedSearchQuery,
+      debouncedGenreFilter,
+      debouncedPlatformFilter,
+      dates,
+    ],
+    [
+      page,
+      pageSize,
+      debouncedSearchQuery,
+      debouncedGenreFilter,
+      debouncedPlatformFilter,
+      dates,
+    ]
   );
 
-  useEffect(() => {
-    const dates = yearFilter ? `${yearFilter}-01-01,${yearFilter}-12-31` : "";
-    debouncedFetchGames(
-      searchQuery,
-      dates,
-      genreFilter,
-      platformFilter,
+  // The fetcher function uses your existing query call
+  const fetchGames = async () => {
+    const data = await QUERIES.GET_GAMES(
       page,
-      pageSize
+      pageSize,
+      debouncedSearchQuery,
+      debouncedPlatformFilter,
+      debouncedGenreFilter,
+      dates
     );
+    return data;
+  };
 
-    return () => {
-      debouncedFetchGames.clear();
-    };
-  }, [
-    searchQuery,
-    yearFilter,
-    genreFilter,
-    platformFilter,
-    page,
-    pageSize,
-    debouncedFetchGames,
-  ]);
+  const { data, error, isValidating } = useSWR(swrKey, fetchGames, {});
 
+  // Update local storage whenever page changes
   useEffect(() => {
     localStorage.setItem("currentPage", page.toString());
   }, [page]);
 
-  const totalPages = Math.ceil(count / pageSize);
+  const totalPages = data ? Math.ceil(data.count / pageSize) : 1;
 
-  const getPaginationGroup = useCallback(() => {
+  const getPaginationGroup = () => {
     const visiblePages = 5;
     let startPage = Math.max(1, page - Math.floor(visiblePages / 2));
     const endPage = Math.min(totalPages, startPage + visiblePages - 1);
@@ -114,7 +114,7 @@ export default function GameList({
       { length: endPage - startPage + 1 },
       (_, i) => startPage + i
     );
-  }, [page, totalPages]);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -174,12 +174,14 @@ export default function GameList({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {isLoading ? (
+        {isValidating ? (
           <div className="flex justify-center items-center h-48">
             <Loader2 className="animate-spin h-10 w-10 text-white" />
           </div>
-        ) : featuredGames && featuredGames.length > 0 ? (
-          featuredGames.map((game) => <GameCard key={game.id} game={game} />)
+        ) : data && data.results && data.results.length > 0 ? (
+          data.results.map((game: any) => (
+            <GameCard key={game.id} game={game} />
+          ))
         ) : (
           <p>No games found</p>
         )}

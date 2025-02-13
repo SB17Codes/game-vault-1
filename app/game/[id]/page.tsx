@@ -5,6 +5,7 @@ import GameDetailsTabs from "@/components/GameDetailsTabs";
 import { getTwitchAccessToken } from "@/lib/twitch";
 import { Suspense } from "react";
 import { Metadata, ResolvingMetadata } from "next";
+import { auth } from "@clerk/nextjs/server";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -53,8 +54,7 @@ export default async function GameDetails({ params }: Props) {
     );
   }
 
-  const userId = "1"; // Replace with your actual user ID
-
+  const { userId } = await auth();
   return (
     <Suspense fallback={<p>Loading data .... </p>}>
       <div className="container mx-auto px-4 py-8">
@@ -80,7 +80,7 @@ export default async function GameDetails({ params }: Props) {
             </div>
           </div>
           <div className="absolute top-4 right-4">
-            <GameActions gameId={game.id} userId={userId} />
+            <GameActions gameId={game.id} userId={userId!} />
           </div>
         </div>
 
