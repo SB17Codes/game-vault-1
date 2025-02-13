@@ -66,7 +66,9 @@ export default function GameCard({ game }: GameCardProps) {
           <p className="text-yellow-400 flex items-center">
             <Star className="mr-1 h-4 w-4" /> {game.rating.toFixed(1)}
           </p>
-          <GameActions gameId={game.id} userId={String(user?.id)} />
+          {user?.id && (
+            <GameActions gameId={game.id} userId={String(user?.id)} />
+          )}
         </div>
       </div>
     )

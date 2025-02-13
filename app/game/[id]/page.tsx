@@ -79,9 +79,11 @@ export default async function GameDetails({ params }: Props) {
               </p>
             </div>
           </div>
-          <div className="absolute top-4 right-4">
-            <GameActions gameId={game.id} userId={userId!} />
-          </div>
+          {userId && (
+            <div className="absolute top-4 right-4">
+              <GameActions gameId={game.id} userId={userId!} />
+            </div>
+          )}
         </div>
 
         <GameDetailsTabs
