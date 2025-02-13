@@ -7,17 +7,18 @@ import { Suspense } from "react";
 import { Metadata, ResolvingMetadata } from "next";
 
 type Props = {
-  params: { id: Promise<string> };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export async function generateMetadata(
   { params, searchParams }: Props,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const id = Number(params.id);
+  const { id } = await params;
+  const gameId = Number(id);
 
-  const game = await QUERIES.GET_GAME(id);
+  const game = await QUERIES.GET_GAME(gameId);
 
   return {
     title: game.name,
@@ -30,17 +31,14 @@ export async function generateMetadata(
   };
 }
 
-export default async function GameDetails({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function GameDetails({ params }: Props) {
   const { id } = await params;
+  const gameId = Number(id);
   const accessToken = await getTwitchAccessToken();
   const [game, gameScreenshots, redditPosts] = await Promise.all([
-    QUERIES.GET_GAME(Number(id)),
-    QUERIES.GET_GAME_SCREENSHOTS(Number(id)),
-    QUERIES.GET_REDDIT_POSTS(Number(id)),
+    QUERIES.GET_GAME(gameId),
+    QUERIES.GET_GAME_SCREENSHOTS(gameId),
+    QUERIES.GET_REDDIT_POSTS(gameId),
   ]);
 
   const twitchGameId = await QUERIES.SEARCH_TWITCH_GAMES(
