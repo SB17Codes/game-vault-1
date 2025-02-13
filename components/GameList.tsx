@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import useSWR from "swr";
+import { useState, useEffect } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { QUERIES } from "@/server/actions";
 import GameCard from "./GameCard";
-import { Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,14 +21,13 @@ interface GameListProps {
   platforms?: any[];
 }
 
-function useDebounce(value: string, delay: number) {
+// Custom hook for debouncing values
+function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
-
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(handler);
   }, [value, delay]);
-
   return debouncedValue;
 }
 
@@ -41,10 +40,6 @@ export default function GameList({
   const [yearFilter, setYearFilter] = useState("");
   const [genreFilter, setGenreFilter] = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
-  const [page, setPage] = useState(() => {
-    const storedPage = localStorage.getItem("currentPage");
-    return storedPage ? Number.parseInt(storedPage) : 1;
-  });
   const [pageSize] = useState(20);
 
   // Debounce the filter values to reduce rapid re-fetches
@@ -53,68 +48,82 @@ export default function GameList({
   const debouncedGenreFilter = useDebounce(genreFilter, 500);
   const debouncedPlatformFilter = useDebounce(platformFilter, 500);
 
-  // Construct dates parameter based on the debounced year filter
+  // Construct dates parameter from the debounced year filter
   const dates = debouncedYearFilter
     ? `${debouncedYearFilter}-01-01,${debouncedYearFilter}-12-31`
     : "";
 
-  // Create a unique key based on all filter criteria
-  const swrKey = useMemo(
-    () => [
-      "games",
-      page,
-      pageSize,
-      debouncedSearchQuery,
-      debouncedGenreFilter,
-      debouncedPlatformFilter,
-      dates,
-    ],
-    [
-      page,
-      pageSize,
-      debouncedSearchQuery,
-      debouncedGenreFilter,
-      debouncedPlatformFilter,
-      dates,
-    ]
-  );
+  // Build a query key based on the filters (excluding page, which is handled by pageParam)
+  const queryKey = [
+    "games",
+    debouncedSearchQuery,
+    debouncedGenreFilter,
+    debouncedPlatformFilter,
+    dates,
+  ];
 
-  // The fetcher function uses your existing query call
-  const fetchGames = async () => {
+  // Define the fetcher function that uses the pageParam provided by useInfiniteQuery
+  const fetchGames = async ({ pageParam = 1 }) => {
     const data = await QUERIES.GET_GAMES(
-      page,
+      pageParam,
       pageSize,
       debouncedSearchQuery,
       debouncedPlatformFilter,
       debouncedGenreFilter,
       dates
     );
-    return data;
+    return {
+      count: data.count,
+      next: data.next,
+      previous: data.previous,
+      results: data.results,
+      currentPage: pageParam,
+    };
   };
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey,
+    queryFn: fetchGames,
 
-  const { data, error, isValidating } = useSWR(swrKey, fetchGames, {});
+    getNextPageParam: (lastPage, allPages) => {
+      const nextPage = allPages.length + 1;
+      const totalPages = Math.ceil(lastPage.count / pageSize);
+      return nextPage <= totalPages ? nextPage : undefined;
+    },
+    initialData: {
+      pages: [
+        {
+          count: initialGames.length,
+          next: null,
+          previous: null,
+          results: initialGames,
+          currentPage: 1,
+        },
+      ],
+      pageParams: [1],
+    },
+    initialPageParam: 1,
+  });
 
-  // Update local storage whenever page changes
+  // Optionally, refetch when any filter changes
   useEffect(() => {
-    localStorage.setItem("currentPage", page.toString());
-  }, [page]);
+    refetch();
+  }, [
+    debouncedSearchQuery,
+    debouncedGenreFilter,
+    debouncedPlatformFilter,
+    dates,
+    refetch,
+  ]);
 
-  const totalPages = data ? Math.ceil(data.count / pageSize) : 1;
-
-  const getPaginationGroup = () => {
-    const visiblePages = 5;
-    let startPage = Math.max(1, page - Math.floor(visiblePages / 2));
-    const endPage = Math.min(totalPages, startPage + visiblePages - 1);
-
-    if (endPage - startPage + 1 < visiblePages) {
-      startPage = Math.max(1, endPage - visiblePages + 1);
-    }
-
-    return Array.from(
-      { length: endPage - startPage + 1 },
-      (_, i) => startPage + i
-    );
-  };
+  // Flatten pages to a single list of games
+  const games = data ? data.pages.flatMap((page) => page.results) : [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -174,45 +183,23 @@ export default function GameList({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {isValidating ? (
+        {isLoading ? (
           <div className="flex justify-center items-center h-48">
             <Loader2 className="animate-spin h-10 w-10 text-white" />
           </div>
-        ) : data && data.results && data.results.length > 0 ? (
-          data.results.map((game: any) => (
-            <GameCard key={game.id} game={game} />
-          ))
+        ) : games.length > 0 ? (
+          games.map((game: any) => <GameCard key={game.id} game={game} />)
         ) : (
           <p>No games found</p>
         )}
       </div>
 
-      <div className="flex justify-center items-center gap-2">
-        <Button
-          onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-          disabled={page === 1}
-          variant="outline"
-          size="icon"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        {getPaginationGroup().map((pageNumber) => (
-          <Button
-            key={pageNumber}
-            onClick={() => setPage(pageNumber)}
-            variant={page === pageNumber ? "default" : "outline"}
-          >
-            {pageNumber}
+      <div className="flex justify-center items-center gap-4">
+        {hasNextPage && (
+          <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+            {isFetchingNextPage ? "Loading more..." : "Load More"}
           </Button>
-        ))}
-        <Button
-          onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-          disabled={page === totalPages}
-          variant="outline"
-          size="icon"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        )}
       </div>
     </div>
   );
