@@ -13,7 +13,7 @@ interface GameCardProps {
 export default function GameCard({ game }: GameCardProps) {
   const { user } = useUser();
   const [isFavoriteLocal, setIsFavoriteLocal] = useState(true);
-  const [isLoading, setIsLoading] = useState(false); // Add loading state
+  const [isLoading, setIsLoading] = useState(false); 
 
   const handleUnfavoriteOptimistic = async () => {
     setIsFavoriteLocal(false);
@@ -24,9 +24,9 @@ export default function GameCard({ game }: GameCardProps) {
       <div className="bg-gray-900 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
         <Link
           href={`/game/${game.id}`}
-          prefetch={true} // Prefetch the game details page
+          prefetch={true}
           className="block"
-          onClick={() => setIsLoading(true)} // Set loading state on click
+          onClick={() => setIsLoading(true)}
         >
           <div className="relative">
             <img

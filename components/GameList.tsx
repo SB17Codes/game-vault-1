@@ -53,7 +53,6 @@ export default function GameList({
     ? `${debouncedYearFilter}-01-01,${debouncedYearFilter}-12-31`
     : "";
 
-  // Build a query key based on the filters (excluding page, which is handled by pageParam)
   const queryKey = [
     "games",
     debouncedSearchQuery,
@@ -62,7 +61,6 @@ export default function GameList({
     dates,
   ];
 
-  // Define the fetcher function that uses the pageParam provided by useInfiniteQuery
   const fetchGames = async ({ pageParam = 1 }) => {
     const data = await QUERIES.GET_GAMES(
       pageParam,

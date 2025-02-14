@@ -1,14 +1,6 @@
 import { ArrowUpCircle, MessageCircle, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-interface RedditPost {
-  name: string;
-  username: string;
-  created: string;
-  text: string;
-  url: string;
-}
-
 interface RedditPostProps {
   post: RedditPost;
 }

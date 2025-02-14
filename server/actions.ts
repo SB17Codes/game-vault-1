@@ -7,7 +7,6 @@ const RAWG_API_KEY = process.env.NEXT_PUBLIC_RAWG_API_KEY;
 const RAWG_BASE_URL = "https://api.rawg.io/api";
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
-const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 const TWITCH_BASE_URL = "https://api.twitch.tv/helix";
 
 interface PaginatedResponse<T> {
