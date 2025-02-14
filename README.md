@@ -44,19 +44,6 @@ A modern video game collection manager built with Next.js 15. Browse, favorite, 
 - Supabase account
 - Clerk account
 
-### Environment Setup
-
-Create `.env.local`:
-
-```bash
-# Auth
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-
-# Database
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
 
 ### Installation
 
