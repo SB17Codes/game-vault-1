@@ -37,9 +37,30 @@ export default function GameList({
   platforms,
 }: GameListProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [yearFilter, setYearFilter] = useState("");
-  const [genreFilter, setGenreFilter] = useState("");
-  const [platformFilter, setPlatformFilter] = useState("");
+  const DEFAULT_FILTER_VALUES = {
+    year: "all",
+    genre: "all",
+    platform: "all",
+  };
+
+  // Update state initialization
+  const [yearFilter, setYearFilter] = useState(DEFAULT_FILTER_VALUES.year);
+  const [genreFilter, setGenreFilter] = useState(DEFAULT_FILTER_VALUES.genre);
+  const [platformFilter, setPlatformFilter] = useState(
+    DEFAULT_FILTER_VALUES.platform
+  );
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 40 }, (_, i) => currentYear - i);
+
+  // Update yearOptions
+  const yearOptions = [
+    { value: "all", label: "All Years" },
+    ...years.map((year) => ({
+      value: year.toString(),
+      label: year.toString(),
+    })),
+  ];
   const [pageSize] = useState(20);
 
   // Debounce the filter values to reduce rapid re-fetches
@@ -62,14 +83,26 @@ export default function GameList({
   ];
 
   const fetchGames = async ({ pageParam = 1 }) => {
+    // Only include filters if they're not set to "all"
+    const searchParams = debouncedSearchQuery.trim();
+    const platformParams =
+      debouncedPlatformFilter === "all" ? "" : debouncedPlatformFilter;
+    const genreParams =
+      debouncedGenreFilter === "all" ? "" : debouncedGenreFilter;
+    const dateParams =
+      debouncedYearFilter === "all"
+        ? ""
+        : `${debouncedYearFilter}-01-01,${debouncedYearFilter}-12-31`;
+
     const data = await QUERIES.GET_GAMES(
       pageParam,
       pageSize,
-      debouncedSearchQuery,
-      debouncedPlatformFilter,
-      debouncedGenreFilter,
-      dates
+      searchParams,
+      platformParams,
+      genreParams,
+      dateParams
     );
+
     return {
       count: data.count,
       next: data.next,
@@ -143,10 +176,11 @@ export default function GameList({
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">All Years</SelectItem>
-              <SelectItem value="2023">2023</SelectItem>
-              <SelectItem value="2022">2022</SelectItem>
-              <SelectItem value="2021">2021</SelectItem>
+              {yearOptions.map((year) => (
+                <SelectItem key={year.value} value={year.value}>
+                  {year.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={genreFilter} onValueChange={setGenreFilter}>
@@ -154,13 +188,12 @@ export default function GameList({
               <SelectValue placeholder="Genre" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">All Genres</SelectItem>
-              {genres &&
-                genres.map((genre) => (
-                  <SelectItem key={genre.id} value={genre.slug}>
-                    {genre.name}
-                  </SelectItem>
-                ))}
+              <SelectItem value="all">All Genres</SelectItem>
+              {genres?.map((genre) => (
+                <SelectItem key={genre.id} value={genre.slug}>
+                  {genre.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={platformFilter} onValueChange={setPlatformFilter}>
@@ -168,15 +201,14 @@ export default function GameList({
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">All Platforms</SelectItem>
-              {platforms &&
-                platforms.map((platform) => (
-                  <SelectItem key={platform.id} value={platform.id.toString()}>
-                    {platform.name}
-                  </SelectItem>
-                ))}
+              <SelectItem value="all">All Platforms</SelectItem>
+              {platforms?.map((platform) => (
+                <SelectItem key={platform.id} value={platform.id.toString()}>
+                  {platform.name}
+                </SelectItem>
+              ))}
             </SelectContent>
-          </Select>
+          </Select>{" "}
         </div>
       </div>
 
