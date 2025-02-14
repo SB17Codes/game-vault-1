@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Game Vault
+
+A modern video game collection manager built with Next.js 14 and React. Browse, favorite, and track games you want to play.
+
+[Live Demo](https://game-vault-1.vercel.app)
+
+## Tech Stack
+
+### Core
+
+- Next.js 14 with TurboPack
+- React 19
+- TypeScript
+- Tailwind CSS
+- Supabase
+
+### Authentication & Data
+
+- Clerk Authentication
+- TanStack Query
+- PostgreSQL
+
+### UI Components
+
+- Radix UI (Select, Slot, Tabs)
+- Lucide Icons
+- Tailwind Animations
+
+## Features
+
+- 🎮 Browse and search games
+- 👤 User authentication
+- ❤️ Favorite games
+- 📑 Wishlist management
+- 🔍 Advanced filtering
+- 📱 Responsive design
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- NPM or Yarn
+- Supabase account
+- Clerk account
+
+### Environment Setup
+
+Create `.env.local`:
+
+```bash
+# Auth
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+
+# Database
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+### Installation
+
+Clone and install:
+
+```bash
+git clone https://github.com/SB17Codes/game-vault-1.git
+cd game-vault-1
+npm install
+```
+
+### Start development:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+├── app/                # Next.js app router pages
+├── components/         # React components
+├── lib/               # Utility functions
+├── server/            # Server-side code
+└── types/             # TypeScript definitions
+```
 
-## Learn More
+## Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+### Tables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+#### `favorites`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Stores user's favorite games.
 
-## Deploy on Vercel
+#### `wishlist`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Stores user's wishlisted games.
