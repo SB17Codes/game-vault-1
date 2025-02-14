@@ -8,7 +8,7 @@ A modern video game collection manager built with Next.js 15. Browse, favorite, 
 
 ### Core
 
-- Next.js 14 with TurboPack
+- Next.js 15
 - React 19
 - TypeScript
 - Tailwind CSS
