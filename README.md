@@ -1,6 +1,6 @@
 # Game Vault
 
-A modern video game collection manager built with Next.js 14 and React. Browse, favorite, and track games you want to play.
+A modern video game collection manager built with Next.js 15. Browse, favorite, and track games you want to play.
 
 [Live Demo](https://game-vault-1.vercel.app)
 
