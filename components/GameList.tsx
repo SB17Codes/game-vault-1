@@ -16,12 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface GameListProps {
-  initialGames: any[];
+  initialGames: Game[];
   genres?: any[];
   platforms?: any[];
 }
 
-// Custom hook for debouncing values
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -43,17 +42,18 @@ export default function GameList({
     platform: "all",
   };
 
-  // Update state initialization
   const [yearFilter, setYearFilter] = useState(DEFAULT_FILTER_VALUES.year);
   const [genreFilter, setGenreFilter] = useState(DEFAULT_FILTER_VALUES.genre);
+
   const [platformFilter, setPlatformFilter] = useState(
     DEFAULT_FILTER_VALUES.platform
   );
 
+  const [isFiltering, setIsFiltering] = useState(false);
+
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 40 }, (_, i) => currentYear - i);
 
-  // Update yearOptions
   const yearOptions = [
     { value: "all", label: "All Years" },
     ...years.map((year) => ({
@@ -63,36 +63,42 @@ export default function GameList({
   ];
   const [pageSize] = useState(20);
 
-  // Debounce the filter values to reduce rapid re-fetches
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const debouncedYearFilter = useDebounce(yearFilter, 500);
-  const debouncedGenreFilter = useDebounce(genreFilter, 500);
-  const debouncedPlatformFilter = useDebounce(platformFilter, 500);
 
-  // Construct dates parameter from the debounced year filter
-  const dates = debouncedYearFilter
-    ? `${debouncedYearFilter}-01-01,${debouncedYearFilter}-12-31`
-    : "";
+  const getDateRange = () => {
+    return yearFilter === "all"
+      ? ""
+      : `${yearFilter}-01-01,${yearFilter}-12-31`;
+  };
 
   const queryKey = [
     "games",
     debouncedSearchQuery,
-    debouncedGenreFilter,
-    debouncedPlatformFilter,
-    dates,
+    genreFilter,
+    platformFilter,
+    getDateRange(),
   ];
 
+  const handleYearFilterChange = (value: string) => {
+    setIsFiltering(true);
+    setYearFilter(value);
+  };
+
+  const handleGenreFilterChange = (value: string) => {
+    setIsFiltering(true);
+    setGenreFilter(value);
+  };
+
+  const handlePlatformFilterChange = (value: string) => {
+    setIsFiltering(true);
+    setPlatformFilter(value);
+  };
+
   const fetchGames = async ({ pageParam = 1 }) => {
-    // Only include filters if they're not set to "all"
     const searchParams = debouncedSearchQuery.trim();
-    const platformParams =
-      debouncedPlatformFilter === "all" ? "" : debouncedPlatformFilter;
-    const genreParams =
-      debouncedGenreFilter === "all" ? "" : debouncedGenreFilter;
-    const dateParams =
-      debouncedYearFilter === "all"
-        ? ""
-        : `${debouncedYearFilter}-01-01,${debouncedYearFilter}-12-31`;
+    const platformParams = platformFilter === "all" ? "" : platformFilter;
+    const genreParams = genreFilter === "all" ? "" : genreFilter;
+    const dateParams = getDateRange();
 
     const data = await QUERIES.GET_GAMES(
       pageParam,
@@ -103,6 +109,8 @@ export default function GameList({
       dateParams
     );
 
+    setIsFiltering(false);
+
     return {
       count: data.count,
       next: data.next,
@@ -111,17 +119,17 @@ export default function GameList({
       currentPage: pageParam,
     };
   };
+
   const {
     data,
     isLoading,
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
-    refetch,
+    isFetching,
   } = useInfiniteQuery({
     queryKey,
     queryFn: fetchGames,
-
     getNextPageParam: (lastPage, allPages) => {
       const nextPage = allPages.length + 1;
       const totalPages = Math.ceil(lastPage.count / pageSize);
@@ -142,19 +150,9 @@ export default function GameList({
     initialPageParam: 1,
   });
 
-  // Optionally, refetch when any filter changes
-  useEffect(() => {
-    refetch();
-  }, [
-    debouncedSearchQuery,
-    debouncedGenreFilter,
-    debouncedPlatformFilter,
-    dates,
-    refetch,
-  ]);
-
-  // Flatten pages to a single list of games
   const games = data ? data.pages.flatMap((page) => page.results) : [];
+
+  const showLoading = isLoading || (isFetching && isFiltering);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -166,12 +164,15 @@ export default function GameList({
             placeholder="Search for games..."
             className="w-full pr-10"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setIsFiltering(true);
+              setSearchQuery(e.target.value);
+            }}
           />
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select value={yearFilter} onValueChange={setYearFilter}>
+          <Select value={yearFilter} onValueChange={handleYearFilterChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Year" />
             </SelectTrigger>
@@ -183,7 +184,7 @@ export default function GameList({
               ))}
             </SelectContent>
           </Select>
-          <Select value={genreFilter} onValueChange={setGenreFilter}>
+          <Select value={genreFilter} onValueChange={handleGenreFilterChange}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Genre" />
             </SelectTrigger>
@@ -196,7 +197,10 @@ export default function GameList({
               ))}
             </SelectContent>
           </Select>
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
+          <Select
+            value={platformFilter}
+            onValueChange={handlePlatformFilterChange}
+          >
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
@@ -213,14 +217,14 @@ export default function GameList({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-48">
+        {showLoading ? (
+          <div className="flex justify-center items-center h-48 col-span-full">
             <Loader2 className="animate-spin h-10 w-10 text-white" />
           </div>
         ) : games.length > 0 ? (
           games.map((game: any) => <GameCard key={game.id} game={game} />)
         ) : (
-          <p>No games found</p>
+          <p className="col-span-full text-center py-8">No games found</p>
         )}
       </div>
 
